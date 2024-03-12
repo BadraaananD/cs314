@@ -1,3 +1,5 @@
+package library;
+
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -8,6 +10,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Scanner;
 
 import javax.swing.JButton;
@@ -24,43 +27,14 @@ class Library_admin extends JFrame implements ActionListener {
     private JTextField textField1, textField2, textField3, textField4, textField5, textField6, textField7;
     private JButton addButton, viewButton, editButton, deleteButton, clearButton, exitButton;
     private JPanel panel;
-    private ArrayList<String[]> books = new ArrayList<String[]>();
+    private ArrayList<Book> books = new ArrayList<>();
     private String file_name;
 
-    private void readFileUpdateArray() {
-        String line = "";
-        String splitBy = ",";
-        try {
-            try (// parsing a CSV file into BufferedReader class constructor
-                 BufferedReader br = new BufferedReader(new FileReader(file_name))) {
-                while ((line = br.readLine()) != null) // returns a Boolean value
-                {
-                    String[] data = line.split(splitBy); // use comma as separator
-                    if (data.length == 7 && data[0] != "" && data[2] != "" && data[3] != "" && data[4] != ""
-                            && data[5] != "" && data[6] != "" && data[1] != "") {
-                        books.add(data);
-                    }
-
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void writeUpdateFileArray() {
-        try (FileWriter fw = new FileWriter(file_name)) {
-            for (int i = 0; i < books.size(); i++) {
-                fw.append("\n"); // New line
-                fw.append(books.get(i)[0] + "," + books.get(i)[1] + "," + books.get(i)[2] + "," + books.get(i)[3] + ","
-                        + books.get(i)[4] + "," + books.get(i)[5] + "," + books.get(i)[6]);
-            }
-            ;
-            System.out.println("Data successfully appended to the file.");
-        } catch (IOException e) {
-            System.out.println("An error occurred while appending data to the file.");
-            e.printStackTrace();
-        }
+        FileOperations.writeUpdateFileArray(books, file_name);
+    }
+    private void readFileUpdateArray() {
+    	FileOperations.readFileAndUpdateArray(books, file_name);
     }
 
     public Library_admin(String filename) {
@@ -126,79 +100,113 @@ class Library_admin extends JFrame implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == addButton) {
-            String[] book = new String[7];
-            book[0] = textField1.getText();
-            book[1] = textField2.getText();
-            book[2] = textField3.getText();
-            book[3] = textField4.getText();
-            book[4] = textField5.getText();
-            book[5] = textField6.getText();
-            book[6] = textField7.getText();
-            books.add(book);
-            JOptionPane.showMessageDialog(this, "Book added successfully");
-            clearFields();
-        } else if (e.getSource() == viewButton) {
-            String[] columns = { "Book ID", "Book Title", "Author", "Publisher", "Year of Publication", "ISBN",
-                    "Number of Copies" };
-            Object[][] data = new Object[books.size()][7];
-            for (int i = 0; i < books.size(); i++) {
-                data[i][0] = books.get(i)[0];
-                data[i][1] = books.get(i)[1];
-                data[i][2] = books.get(i)[2];
-                data[i][3] = books.get(i)[3];
-                data[i][4] = books.get(i)[4];
-                data[i][5] = books.get(i)[5];
-                data[i][6] = books.get(i)[6];
+    if (e.getSource() == addButton) {
+        handleAddButton();
+    } else if (e.getSource() == viewButton) {
+        handleViewButton();
+    } else if (e.getSource() == editButton) {
+        handleEditButton();
+    } else if (e.getSource() == deleteButton) {
+        handleDeleteButton();
+    } else if (e.getSource() == clearButton) {
+        handleClearButton();
+    } else if (e.getSource() == exitButton) {
+        handleExitButton();
+    }
+    }
+
+     private void handleAddButton() {
+        Book book = getBookFromFields();
+        books.add(book);
+        JOptionPane.showMessageDialog(this, "Book added successfully");
+        clearFields();
+    }
+    
+    private void handleViewButton() {
+        showBooksTable();
+    }
+
+    private void handleEditButton() {
+        String bookID = JOptionPane.showInputDialog(this, "Enter book ID to edit:");
+        editBook(bookID);
+    }
+
+
+    private void handleDeleteButton() {
+        String bookID = JOptionPane.showInputDialog(this, "Enter book ID to delete:");
+        deleteBook(bookID);
+    }
+
+    private void handleClearButton() {
+        clearFields();
+    }
+
+    private void handleExitButton() {
+        writeUpdateFileArray();
+        delayExecution(2000);
+        System.exit(0);
+    }
+
+    private Book getBookFromFields() {
+        Book book = new Book();
+        book.setId(textField1.getText());
+        book.setTitle(textField2.getText());
+        book.setAuthor(textField3.getText());
+        book.setPublisher(textField4.getText());
+        book.setYearOfPublication(textField5.getText());
+        book.setIsbn(textField6.getText());
+        book.setNumberOfCopies(textField7.getText());
+        return book;
+    }
+
+    private void showBooksTable() {
+        String[] columns = {"Book ID", "Book Title", "Author", "Publisher", "Year of Publication", "ISBN", "Number of Copies"};
+        Object[][] data = new Object[books.size()][7];
+        for (int i = 0; i < books.size(); i++) {
+            System.arraycopy(books.get(i), 0, data[i], 0, 7);
+        }
+        JTable table = new JTable(data, columns);
+        JScrollPane scrollPane = new JScrollPane(table);
+        JFrame frame = new JFrame("View Books");
+        frame.add(scrollPane);
+        frame.setSize(800, 400);
+        frame.setVisible(true);
+    }
+
+    private void editBook(String bookID) {
+        for (int i = 0; i < books.size(); i++) {
+            if (books.get(i)[0].equals(bookID)) {
+                String[] book = getBookFromFields();
+                book[0] = bookID;
+                books.set(i, book);
+                JOptionPane.showMessageDialog(this, "Book edited successfully");
+                clearFields();
+                return;
             }
-            JTable table = new JTable(data, columns);
-            JScrollPane scrollPane = new JScrollPane(table);
-            JFrame frame = new JFrame("View Books");
-            frame.add(scrollPane);
-            frame.setSize(800, 400);
-            frame.setVisible(true);
-        } else if (e.getSource() == editButton) { // update
-            String bookID = JOptionPane.showInputDialog(this, "Enter book ID to edit:");
-            for (int i = 0; i < books.size(); i++) {
-                if (books.get(i)[0].equals(bookID)) {
-                    String[] book = new String[7];
-                    book[0] = bookID;
-                    book[1] = textField2.getText();
-                    book[2] = textField3.getText();
-                    book[3] = textField4.getText();
-                    book[4] = textField5.getText();
-                    book[5] = textField6.getText();
-                    book[6] = textField7.getText();
-                    books.set(i, book);
-                    JOptionPane.showMessageDialog(this, "Book edited successfully");
-                    clearFields();
-                    return;
-                }
+        }
+        JOptionPane.showMessageDialog(this, "Book not found");
+    }
+
+    private void deleteBook(String bookID) {
+        for (int i = 0; i < books.size(); i++) {
+            if (books.get(i)[0].equals(bookID)) {
+                books.remove(i);
+                JOptionPane.showMessageDialog(this, "Book deleted successfully");
+                clearFields();
+                return;
             }
-            JOptionPane.showMessageDialog(this, "Book not found");
-        } else if (e.getSource() == deleteButton) { // delete
-            String bookID = JOptionPane.showInputDialog(this, "Enter book ID to delete:");
-            for (int i = 0; i < books.size(); i++) {
-                if (books.get(i)[0].equals(bookID)) {
-                    books.remove(i);
-                    JOptionPane.showMessageDialog(this, "Book deleted successfully");
-                    clearFields();
-                    return;
-                }
-            }
-            JOptionPane.showMessageDialog(this, "Book not found");
-        } else if (e.getSource() == clearButton) { // clear
-            clearFields();
-        } else if (e.getSource() == exitButton) { // exit
-            writeUpdateFileArray();
-            try {// pause execution for 2 seconds
-                Thread.sleep(2000);
-            } catch (InterruptedException ex) {// handle the exception
-                System.out.println("Sleep was interrupted");
-            }
-            System.exit(0);
+        }
+        JOptionPane.showMessageDialog(this, "Book not found");
+    }
+
+    private void delayExecution(int milliseconds) {
+        try {
+            Thread.sleep(milliseconds);
+        } catch (InterruptedException ex) {
+            System.out.println("Sleep was interrupted");
         }
     }
+
 
     private void clearFields() {
         textField1.setText("");
@@ -211,6 +219,58 @@ class Library_admin extends JFrame implements ActionListener {
     }
 }
 
+class Book {
+    private String id;
+    private String title;
+    private String author;
+    private String publisher;
+    private String yearOfPublication;
+    private String isbn;
+    private String numberOfCopies;
+
+    // Constructors, getters, setters...
+
+    // You can also add validation methods if needed
+}
+
+enum UserType {
+    ADMIN,
+    USER
+}
+
+class FileOperations {
+    static void readFileAndUpdateArray(ArrayList<String[]> list, String fileName) {
+        try (BufferedReader br = new BufferedReader(new FileReader(fileName))) {
+            String line;
+            String splitBy = ",";
+            while ((line = br.readLine()) != null) {
+                String[] data = line.split(splitBy);
+                if (isValidData(data)) {
+                    list.add(data);
+                }
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    static void writeUpdateFileArray(ArrayList<String[]> list, String fileName) {
+        try (FileWriter fw = new FileWriter(fileName)) {
+            for (String[] data : list) {
+                fw.write(String.join(",", data) + "\n");
+            }
+            System.out.println("Data successfully written to the file.");
+        } catch (IOException e) {
+            System.out.println("An error occurred while writing data to the file.");
+            e.printStackTrace();
+        }
+    }
+
+    private static boolean isValidData(String[] data) {
+        return data.length == 7 && Arrays.stream(data).noneMatch(String::isEmpty);
+    }
+}
+
 class Library_user extends JFrame implements ActionListener {
     private JLabel label1, label2;
     private JTextField textField1, textField2;
@@ -219,40 +279,11 @@ class Library_user extends JFrame implements ActionListener {
     private ArrayList<String[]> books = new ArrayList<String[]>();
     private String file_name;
 
-    private void readFileUpdateArray() {
-        String line = "";
-        String splitBy = ",";
-        try {
-            try (// parsing a CSV file into BufferedReader class constructor
-                 BufferedReader br = new BufferedReader(new FileReader(file_name))) {
-                while ((line = br.readLine()) != null) // returns a Boolean value
-                {
-                    String[] data = line.split(splitBy); // use comma as separator
-                    if (data.length == 7 && data[0] != "" && data[2] != "" && data[3] != "" && data[4] != ""
-                            && data[5] != "" && data[6] != "" && data[1] != "") {
-                        books.add(data);
-                    }
-
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
     private void writeUpdateFileArray() {
-        try (FileWriter fw = new FileWriter(file_name)) {
-            for (int i = 0; i < books.size(); i++) {
-                fw.append("\n"); // New line
-                fw.append(books.get(i)[0] + "," + books.get(i)[1] + "," + books.get(i)[2] + "," + books.get(i)[3] + ","
-                        + books.get(i)[4] + "," + books.get(i)[5] + "," + books.get(i)[6]);
-            }
-            ;
-            System.out.println("Data successfully appended to the file.");
-        } catch (IOException e) {
-            System.out.println("An error occurred while appending data to the file.");
-            e.printStackTrace();
-        }
+        FileOperations.writeUpdateFileArray(books, file_name);
+    }
+    private void readFileUpdateArray() {
+    	FileOperations.readFileAndUpdateArray(books, file_name);
     }
 
     public Library_user(String filename) {
@@ -301,50 +332,60 @@ class Library_user extends JFrame implements ActionListener {
             JOptionPane.showMessageDialog(this, "Book not available");
         }
     }
-
     public void actionPerformed(ActionEvent e) {
         if (e.getSource() == issueButton) {
-            String[] book = new String[7];
-            String idTitle = textField1.getText();
-            for (int i = 0; i < books.size(); i++) {
-                if (books.get(i)[0].equals(idTitle)) {
-                    issueBook(books.get(i));
-                }
-            }
-            books.add(book);
-            JOptionPane.showMessageDialog(this, "Book added successfully");
+            issueBook();
+        } else if (e.getSource() == viewButton) {
+            showBooksTable();
+        } else if (e.getSource() == clearButton) {
             clearFields();
-        } else if (e.getSource() == viewButton) { // view
-            String[] columns = { "Book ID", "Book Title", "Author", "Publisher", "Year of Publication", "ISBN",
-                    "Number of Copies" };
-            Object[][] data = new Object[books.size()][7];
-            for (int i = 0; i < books.size(); i++) {
-                data[i][0] = books.get(i)[0];
-                data[i][1] = books.get(i)[1];
-                data[i][2] = books.get(i)[2];
-                data[i][3] = books.get(i)[3];
-                data[i][4] = books.get(i)[4];
-                data[i][5] = books.get(i)[5];
-                data[i][6] = books.get(i)[6];
-            }
-            JTable table = new JTable(data, columns);
-            JScrollPane scrollPane = new JScrollPane(table);
-            JFrame frame = new JFrame("View Books");
-            frame.add(scrollPane);
-            frame.setSize(800, 400);
-            frame.setVisible(true);
-        } else if (e.getSource() == clearButton) { // clear
-            clearFields();
-        } else if (e.getSource() == exitButton) { // exit
-            writeUpdateFileArray();
-            try {// pause execution for 2 seconds
-                Thread.sleep(2000);
-            } catch (InterruptedException ex) {// handle the exception
-                System.out.println("Sleep was interrupted");
-            }
-            System.exit(0);
+        } else if (e.getSource() == exitButton) {
+            handleExitButton();
         }
     }
+
+    private void issueBook() {
+        String bookID = textField1.getText();
+        Optional<String[]> optionalBook = findBookById(bookID);
+
+        if (optionalBook.isPresent()) {
+            issueBook(optionalBook.get());
+            JOptionPane.showMessageDialog(this, "Book issued successfully");
+            clearFields();
+        } else {
+            JOptionPane.showMessageDialog(this, "Book not found");
+        }
+    }
+
+    private void showBooksTable() {
+        String[] columns = {"Book ID", "Book Title", "Author", "Publisher", "Year of Publication", "ISBN", "Number of Copies"};
+        Object[][] data = new Object[books.size()][7];
+
+        for (int i = 0; i < books.size(); i++) {
+            System.arraycopy(books.get(i), 0, data[i], 0, 7);
+        }
+
+        JTable table = new JTable(data, columns);
+        JScrollPane scrollPane = new JScrollPane(table);
+
+        JFrame frame = new JFrame("View Books");
+        frame.add(scrollPane);
+        frame.setSize(800, 400);
+        frame.setVisible(true);
+    }
+
+    private void handleExitButton() {
+        writeUpdateFileArray();
+        delayExecution(2000);
+        System.exit(0);
+    }
+
+    private Optional<String[]> findBookById(String bookID) {
+        return books.stream()
+                .filter(book -> book[0].equals(bookID))
+                .findFirst();
+    }
+
 
     private void clearFields() { // clear
         textField1.setText("");
@@ -362,19 +403,7 @@ class Library_login extends JFrame implements ActionListener {
     private String file_name_user_data; // user data
 
     private void readFileUpdateArray() {
-        try {
-            File myObj = new File(file_name_user_data);
-            Scanner myReader = new Scanner(myObj);
-            while (myReader.hasNextLine()) {
-                String data = myReader.nextLine();
-                String[] arrOfStr = data.split(",");
-                user.add(arrOfStr);
-            }
-            myReader.close();
-        } catch (IOException e) {
-            System.out.println("An error occurred.");
-            e.printStackTrace();
-        }
+        FileOperations.readFileAndUpdateArray(user, file_name_user_data);
     }
 
     public Library_login(String user_data, String records) {
@@ -410,55 +439,77 @@ class Library_login extends JFrame implements ActionListener {
     }
 
     public void actionPerformed(ActionEvent e) {
-        if (e.getSource() == adminlogin) {
-            String user_name = username.getText();
-            String pass_word = password.getText();
-            if (user_name.equals("admin") && pass_word.equals("admin")) {
-                new Library_admin(file_name_records);
-                setVisible(false);
-            } else {
-                JOptionPane.showMessageDialog(this, "Invalid username or password");
-            }
-        } else if (e.getSource() == userlogin) {
-            String user_name = username.getText();
-            String pass_word = password.getText();
-            for (int i = 0; i < user.size(); i++) {
-                if (user.get(i)[0].equals(user_name) && user.get(i)[1].equals(pass_word)) {
-                    new Library_user(file_name_records);
-                    setVisible(false);
-                    return;
-                }
-            }
-            JOptionPane.showMessageDialog(this, "Invalid username or password");
-        } else if (e.getSource() == clearButton) {
-            username.setText("");
-            password.setText("");
-        }
+    if (e.getSource() == adminlogin) {
+        handleAdminLogin();
+    } else if (e.getSource() == userlogin) {
+        handleUserLogin();
+    } else if (e.getSource() == clearButton) {
+        clearCredentials();
     }
 }
 
-public class library_management {
-    public static void main(String[] args) {
-        String user_data = "user_data.csv";
-        String records = "book_records.csv";
-        File user_data_file = new File(user_data);
-        File records_data_file = new File(records);
+private void handleAdminLogin() {
+    String enteredUsername = username.getText();
+    String enteredPassword = password.getText();
 
-        if (!records_data_file.exists()) {
-            try {
-                if (records_data_file.createNewFile()) {
-                    System.out.println("The records data file has been created");
-                }
-            } catch (IOException e) {
-                System.out.println("An error occurred while creating the records data file");
-                e.printStackTrace();
-            }
+    if ("admin".equals(enteredUsername) && "admin".equals(enteredPassword)) {
+        new Library_admin(file_name_records);
+        setVisible(false);
+    } else {
+        JOptionPane.showMessageDialog(this, "Invalid username or password");
+    }
+}
+
+private void handleUserLogin() {
+    String enteredUsername = username.getText();
+    String enteredPassword = password.getText();
+
+    Optional<String[]> userOptional = user.stream()
+            .filter(userData -> enteredUsername.equals(userData[0]) && enteredPassword.equals(userData[1]))
+            .findFirst();
+
+    if (userOptional.isPresent()) {
+        new Library_user(file_name_records);
+        setVisible(false);
+    } else {
+        JOptionPane.showMessageDialog(this, "Invalid username or password");
+    }
+}
+
+private void clearCredentials() {
+    username.setText("");
+    password.setText("");
+}
+
+}
+
+public class library_management {
+	private static final String USER_DATA_FILE = "user_data.csv";
+    private static final String RECORDS_FILE = "book_records.csv";
+
+    public static void main(String[] args) {
+        File userDataFile = new File(USER_DATA_FILE);
+        File recordsDataFile = new File(RECORDS_FILE);
+
+        if (!recordsDataFile.exists()) {
+            createRecordsDataFile(recordsDataFile);
         }
 
-        if (user_data_file.exists()) {
-            new Library_login(user_data, records);
+        if (userDataFile.exists()) {
+            new Library_login(USER_DATA_FILE, RECORDS_FILE);
         } else {
-            System.out.println("The user data file does not exist please create it first");
+            System.out.println("The user data file does not exist. Please create it first.");
+        }
+    }
+
+    private static void createRecordsDataFile(File file) {
+        try {
+            if (file.createNewFile()) {
+                System.out.println("The records data file has been created.");
+            }
+        } catch (IOException e) {
+            System.out.println("An error occurred while creating the records data file.");
+            e.printStackTrace();
         }
     }
 }
